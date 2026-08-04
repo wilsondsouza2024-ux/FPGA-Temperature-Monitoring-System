@@ -1,0 +1,30 @@
+# Vivado generated files
+.cache/
+.hw/
+.ip_user_files/
+.runs/
+.sim/
+.Xil/
+
+# Vivado log files
+*.log
+*.jou
+*.str
+*.pb
+*.wdb
+*.wcfg
+
+# Temporary and backup files
+*.tmp
+*.bak
+*.swp
+
+# MATLAB autosave files
+*.asv
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# VS Code settings
+.vscode/
