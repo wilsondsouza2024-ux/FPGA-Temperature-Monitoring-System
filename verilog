@@ -1,0 +1,64 @@
+// Module : moving_avg_filter
+// Description : 3rd-Order (4-tap) Moving Average FIR Filter
+//
+// y[n] = ( x[n] + x[n-1] + x[n-2] + x[n-3] ) / 4
+//
+// - "3rd order" -> 3 delay elements -> 4 taps total
+// - Division by 4 is implemented as a 2-bit right shift
+// (>> 2), so NO divider hardware is required - very
+// efficient for low-power wearable/IoT FPGA designs.
+//
+// Parameters :
+// DATA_WIDTH : bit-width of each sample (default 12 bits,
+// matches temp_data.mem -> value = temp(C) * 10)
+
+module moving_avg_filter #(
+ parameter DATA_WIDTH = 12
+)(
+ input wire clk,
+ input wire rst, // synchronous, active-high
+ input wire data_valid, // 1 = data_in is valid this cycle
+ input wire [DATA_WIDTH-1:0] data_in, // current temperature sample
+ output reg out_valid, // 1 = data_out is valid
+ output reg [DATA_WIDTH-1:0] data_out // filtered temperature sample
+);
+
+ // Internal shift-register style delay line: x[n-1], x[n-2], x[n-3]
+
+ reg [DATA_WIDTH-1:0] x1; // x[n-1]
+ reg [DATA_WIDTH-1:0] x2; // x[n-2]
+ reg [DATA_WIDTH-1:0] x3; // x[n-3]
+ // Counter to know when we have at least 4 valid samples
+ reg [1:0] sample_count;
+ // Sum needs 2 extra bits to avoid overflow (sum of 4 values)
+ wire [DATA_WIDTH+1:0] sum;
+ assign sum = data_in + x1 + x2 + x3;
+ always @(posedge clk) begin
+ if (rst) begin
+ x1 <= {DATA_WIDTH{1'b0}};
+ x2 <= {DATA_WIDTH{1'b0}};
+ x3 <= {DATA_WIDTH{1'b0}};
+ data_out <= {DATA_WIDTH{1'b0}};
+ out_valid <= 1'b0;
+ sample_count <= 2'd0;
+ end
+ else if (data_valid) begin
+ // ---- shift the delay line ----
+ x3 <= x2;
+ x2 <= x1;
+ x1 <= data_in;
+ // ---- compute moving average (divide by 4 = shift right 2) ----
+ data_out <= sum[DATA_WIDTH+1:2];
+ // ---- output becomes valid once 4 samples have been seen ----
+ if (sample_count == 2'd3)
+ out_valid <= 1'b1;
+ else begin
+ out_valid <= 1'b0;
+ sample_count <= sample_count + 1'b1;
+ end
+ end
+ else begin
+ out_valid <= 1'b0;
+ end
+ end
+endmodule
